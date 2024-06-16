@@ -128,7 +128,11 @@ class DockerComposeServiceWrapper {
     boolean usesLongSyntaxDependsOn() {
         return asObject("depends_on") instanceof Map;
     }
-    
+
+    public String getPlatform() {
+        return asString("platform");
+    }
+
     /**
      * <a href="https://docs.docker.com/compose/compose-file/compose-file-v2/#depends_on">Docker Compose Spec v2.1+ defined conditions</a>
      */
@@ -404,20 +408,20 @@ class DockerComposeServiceWrapper {
         RunVolumeConfiguration.Builder builder = new RunVolumeConfiguration.Builder();
         List<String> volumes = asList("volumes");
         boolean added = false;
-        if (volumes.size() > 0) {
+        if (!volumes.isEmpty()) {
             builder.bind(volumes);
             added = true;
         }
         List<String> volumesFrom = asList("volumes_from");
-        if (volumesFrom.size() > 0) {
+        if (!volumesFrom.isEmpty()) {
             builder.from(volumesFrom);
             added = true;
         }
 
         if (added) {
-            RunVolumeConfiguration configuration = builder.build();
-            VolumeBindingUtil.resolveRelativeVolumeBindings(baseDir, configuration);
-            return configuration;
+            RunVolumeConfiguration runVolumeConfiguration = builder.build();
+            VolumeBindingUtil.resolveRelativeVolumeBindings(baseDir, runVolumeConfiguration);
+            return runVolumeConfiguration;
         }
 
         return null;

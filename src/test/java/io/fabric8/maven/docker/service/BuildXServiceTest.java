@@ -1,8 +1,10 @@
 package io.fabric8.maven.docker.service;
 
+import io.fabric8.maven.docker.util.ImageName;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.io.File;
@@ -19,6 +21,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -258,6 +262,33 @@ class BuildXServiceTest {
             assertTrue(configDirPath.resolve("cli-plugins").resolve("docker-buildx").toFile().exists());
             verify(logger).debug("Detected current version of BuildX not working with --config override");
             verify(logger).debug("Copying BuildX binary to " + temporaryFolder.toPath().resolve("docker-state-dir"));
+        }
+    }
+
+
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void testBuildWithTag(boolean skipTag) throws Exception {
+        List<String> tags = new ArrayList<>();
+        tags.add("tag-" + System.currentTimeMillis());
+        tags.add("tag-" + System.currentTimeMillis());
+
+        //Given
+        buildConfigUsingBuildx(temporaryFolder, (buildX, buildImage) -> {
+            buildImage.skipTag(skipTag);
+            buildImage.tags(tags);
+        });
+
+        // When
+        buildx.build(projectPaths, imageConfig, configuredRegistry, authConfigList, buildArchive);
+
+        String[] fullTags = tags.stream()
+                .map(tag -> new ImageName(imageConfig.getName(), tag).getFullName(configuredRegistry))
+                .toArray(String[]::new);
+        if (skipTag) {
+            verifyBuildXArgumentNotPresentInExec(fullTags);
+        } else {
+            verifyBuildXArgumentPresentInExec(fullTags);
         }
     }
 
